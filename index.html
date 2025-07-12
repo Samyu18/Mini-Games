@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mini Games Collection</title>
+    <link rel="stylesheet" href="static/css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1 class="title">🎮 Mini Games Collection</h1>
+            <p class="subtitle">Choose your game and have fun!</p>
+        </header>
+        <main class="games-grid">
+            <div class="game-card" onclick="loadGame('rock-paper-scissors')">
+                <div class="game-icon">✂️</div>
+                <h3>Rock Paper Scissors</h3>
+                <p>Classic hand game against the computer or friend</p>
+            </div>
+            <div class="game-card" onclick="loadGame('tic-tac-toe')">
+                <div class="game-icon">⭕</div>
+                <h3>Tic Tac Toe</h3>
+                <p>Strategic X's and O's game</p>
+            </div>
+            <div class="game-card" onclick="loadGame('memory')">
+                <div class="game-icon">🧠</div>
+                <h3>Memory Game</h3>
+                <p>Test your memory with card matching</p>
+            </div>
+            <div class="game-card" onclick="loadGame('snake')">
+                <div class="game-icon">🐍</div>
+                <h3>Snake Game</h3>
+                <p>Classic snake game with keyboard controls</p>
+            </div>
+        </main>
+        <div id="game-container" class="game-container hidden">
+            <button class="back-btn" onclick="showMainMenu()">← Back to Menu</button>
+            <div id="game-content"></div>
+        </div>
+    </div>
+    <script src="static/js/script.js"></script>
+</body>
+</html> 
