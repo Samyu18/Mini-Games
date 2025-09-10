@@ -1,268 +1,28 @@
+// Purely client-side static version for GitHub Pages
+// Only game logic and UI, no backend, no login, no stats, no leaderboards
+
 // Global variables
 let currentGame = null;
 let gameState = {};
 let gameMode = null; // 'single' or 'multiplayer'
-let currentUser = null;
 let gameStartTime = null;
 let snakeGameLoop = null; // For snake game interval
 
-// Authentication functions
-async function checkAuthStatus() {
-    try {
-        const response = await fetch('/api/check-auth');
-        const data = await response.json();
-        
-        if (data.authenticated) {
-            currentUser = data.user;
-            showMainSection();
-        } else {
-            showAuthSection();
-        }
-    } catch (error) {
-        console.error('Auth check failed:', error);
-        showAuthSection();
-    }
+// Main menu
+function showMainMenu() {
+    currentGame = null;
+    gameState = {};
+    gameMode = null;
+    gameStartTime = null;
+    document.querySelector('.games-grid').style.display = 'grid';
+    document.getElementById('game-container').classList.add('hidden');
+    document.getElementById('game-content').innerHTML = '';
 }
 
-function showAuthSection() {
-    document.getElementById('auth-section').classList.remove('hidden');
-    document.getElementById('main-section').classList.add('hidden');
-}
-
-function showMainSection() {
-    document.getElementById('auth-section').classList.add('hidden');
-    document.getElementById('main-section').classList.remove('hidden');
-    document.getElementById('user-username').textContent = `Welcome, ${currentUser.username}!`;
-}
-
-// Auth form functions
-function showLogin() {
-    document.querySelectorAll('.auth-tab').forEach(tab => tab.classList.remove('active'));
-    event.target.classList.add('active');
-    document.getElementById('login-form-content').classList.remove('hidden');
-    document.getElementById('register-form-content').classList.add('hidden');
-}
-
-function showRegister() {
-    document.querySelectorAll('.auth-tab').forEach(tab => tab.classList.remove('active'));
-    event.target.classList.add('active');
-    document.getElementById('register-form-content').classList.remove('hidden');
-    document.getElementById('login-form-content').classList.add('hidden');
-}
-
-// Form event listeners
-document.addEventListener('DOMContentLoaded', function() {
-    checkAuthStatus();
-    
-    // Login form
-    document.getElementById('login-form-content').addEventListener('submit', async function(e) {
-        e.preventDefault();
-        await login();
-    });
-    
-    // Register form
-    document.getElementById('register-form-content').addEventListener('submit', async function(e) {
-        e.preventDefault();
-        await register();
-    });
-});
-
-async function login() {
-    const username = document.getElementById('login-username').value;
-    const password = document.getElementById('login-password').value;
-    
-    try {
-        const response = await fetch('/api/login', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ username, password })
-        });
-        
-        const data = await response.json();
-        
-        if (response.ok) {
-            currentUser = { username, id: data.user_id };
-            showMainSection();
-        } else {
-            alert(data.error || 'Login failed');
-        }
-    } catch (error) {
-        console.error('Login error:', error);
-        alert('Login failed. Please try again.');
-    }
-}
-
-async function register() {
-    const username = document.getElementById('register-username').value;
-    const email = document.getElementById('register-email').value;
-    const password = document.getElementById('register-password').value;
-    
-    try {
-        const response = await fetch('/api/register', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ username, email, password })
-        });
-        
-        const data = await response.json();
-        
-        if (response.ok) {
-            alert('Registration successful! Please login.');
-            showLogin();
-        } else {
-            alert(data.error || 'Registration failed');
-        }
-    } catch (error) {
-        console.error('Registration error:', error);
-        alert('Registration failed. Please try again.');
-    }
-}
-
-async function logout() {
-    try {
-        await fetch('/api/logout');
-        currentUser = null;
-        showAuthSection();
-    } catch (error) {
-        console.error('Logout error:', error);
-    }
-}
-
-// Stats and Leaderboard functions
-async function showStats() {
-    try {
-        const response = await fetch('/api/user-stats');
-        const stats = await response.json();
-        
-        const statsContent = document.getElementById('stats-content');
-        statsContent.innerHTML = `
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <h3>Rock Paper Scissors</h3>
-                    <div class="stat-value">${stats.rps.score}</div>
-                    <p>Wins: ${stats.rps.wins} | Losses: ${stats.rps.losses} | Draws: ${stats.rps.draws}</p>
-                </div>
-                <div class="stat-card">
-                    <h3>Tic Tac Toe</h3>
-                    <div class="stat-value">${stats.ttt.score}</div>
-                    <p>Wins: ${stats.ttt.wins} | Losses: ${stats.ttt.losses} | Draws: ${stats.ttt.draws}</p>
-                </div>
-                <div class="stat-card">
-                    <h3>Memory Game</h3>
-                    <div class="stat-value">${stats.memory.score}</div>
-                    <p>Wins: ${stats.memory.wins} | Losses: ${stats.memory.losses} | Draws: ${stats.memory.draws}</p>
-                </div>
-                <div class="stat-card">
-                    <h3>Snake Game</h3>
-                    <div class="stat-value">${stats.snake.score}</div>
-                    <p>Wins: ${stats.snake.wins} | Losses: ${stats.snake.losses} | Draws: ${stats.snake.draws}</p>
-                </div>
-            </div>
-        `;
-        
-        document.getElementById('stats-modal').classList.remove('hidden');
-    } catch (error) {
-        console.error('Error loading stats:', error);
-        alert('Failed to load statistics');
-    }
-}
-
-async function showLeaderboards() {
-    document.getElementById('leaderboard-modal').classList.remove('hidden');
-    await showLeaderboard('rps');
-}
-
-async function showLeaderboard(gameType) {
-    // Update active tab
-    document.querySelectorAll('.leaderboard-tab').forEach(tab => tab.classList.remove('active'));
-    event.target.classList.add('active');
-    
-    try {
-        const response = await fetch(`/api/leaderboard/${gameType}`);
-        const leaderboard = await response.json();
-        
-        const gameNames = {
-            'rps': 'Rock Paper Scissors',
-            'ttt': 'Tic Tac Toe',
-            'memory': 'Memory Game'
-        };
-        
-        const leaderboardContent = document.getElementById('leaderboard-content');
-        leaderboardContent.innerHTML = `
-            <h3>${gameNames[gameType]} Leaderboard</h3>
-            <table class="leaderboard-table">
-                <thead>
-                    <tr>
-                        <th>Rank</th>
-                        <th>Player</th>
-                        <th>Score</th>
-                        <th>Wins</th>
-                        <th>Losses</th>
-                        <th>Draws</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${leaderboard.map((entry, index) => `
-                        <tr>
-                            <td class="rank">#${index + 1}</td>
-                            <td class="username">${entry.username}</td>
-                            <td class="score">${entry.score}</td>
-                            <td>${entry.wins}</td>
-                            <td>${entry.losses}</td>
-                            <td>${entry.draws}</td>
-                        </tr>
-                    `).join('')}
-                </tbody>
-            </table>
-        `;
-    } catch (error) {
-        console.error('Error loading leaderboard:', error);
-        alert('Failed to load leaderboard');
-    }
-}
-
-function closeModal(modalId) {
-    document.getElementById(modalId).classList.add('hidden');
-}
-
-// Game saving function
-async function saveGameResult(gameType, gameMode, player1Score, player2Score, winner) {
-    if (!currentUser) return;
-    
-    const duration = gameStartTime ? Math.floor((Date.now() - gameStartTime) / 1000) : 0;
-    
-    try {
-        await fetch('/api/save-game', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                game_type: gameType,
-                game_mode: gameMode,
-                player1_score: player1Score,
-                player2_score: player2Score,
-                winner: winner,
-                duration: duration
-            })
-        });
-    } catch (error) {
-        console.error('Error saving game:', error);
-    }
-}
-
-// Navigation functions
+// Game loader
 function loadGame(gameType) {
-    currentGame = gameType;
-    gameStartTime = Date.now();
     document.querySelector('.games-grid').style.display = 'none';
     document.getElementById('game-container').classList.remove('hidden');
-    
-    // Show player selection first
     showPlayerSelection(gameType);
 }
 
@@ -282,13 +42,11 @@ function showPlayerSelection(gameType) {
             </div>
         </div>
     `;
-    
     document.getElementById('game-content').innerHTML = gameHTML;
 }
 
 function selectGameMode(gameType, mode) {
     gameMode = mode;
-    
     switch(gameType) {
         case 'rock-paper-scissors':
             loadRockPaperScissors();
@@ -305,17 +63,7 @@ function selectGameMode(gameType, mode) {
     }
 }
 
-function showMainMenu() {
-    currentGame = null;
-    gameState = {};
-    gameMode = null;
-    gameStartTime = null;
-    document.querySelector('.games-grid').style.display = 'grid';
-    document.getElementById('game-container').classList.add('hidden');
-    document.getElementById('game-content').innerHTML = '';
-}
-
-// Rock Paper Scissors Game
+// --- Rock Paper Scissors ---
 function loadRockPaperScissors() {
     gameState = {
         player1Score: 0,
@@ -328,9 +76,7 @@ function loadRockPaperScissors() {
         countdown: 3,
         canPlay: false
     };
-    
     const modeText = gameMode === 'single' ? 'vs Computer' : 'vs Player 2';
-    
     const gameHTML = `
         <h2 class="game-title">✂️ Rock Paper Scissors</h2>
         <div class="score-board">
@@ -353,11 +99,9 @@ function loadRockPaperScissors() {
             <button class="btn" onclick="resetRPS()">New Game</button>
         </div>
     `;
-    
     document.getElementById('game-content').innerHTML = gameHTML;
     startRPSCountdown();
 }
-
 function startRPSCountdown() {
     gameState.countdown = 3;
     gameState.canPlay = false;
@@ -377,12 +121,10 @@ function startRPSCountdown() {
     }, 800);
     animateRPSHands('shake');
 }
-
 function updateRPSCountdown() {
     document.getElementById('rps-countdown').textContent = gameState.countdown > 0 ? gameState.countdown : '';
     animateRPSHands('shake');
 }
-
 function animateRPSHands(state) {
     const hand1 = document.getElementById('hand-player1');
     const hand2 = document.getElementById('hand-player2');
@@ -399,21 +141,18 @@ function animateRPSHands(state) {
         hand2.textContent = '✊';
     }
 }
-
 function playRPS(choice) {
     if (!gameState.canPlay) return;
     if (gameState.currentPlayer === 1) {
         gameState.player1Choice = choice;
         showRPSHand('hand-player1', choice);
         if (gameMode === 'single') {
-            // Computer makes choice
             setTimeout(() => {
                 gameState.player2Choice = gameState.choices[Math.floor(Math.random() * 3)];
                 showRPSHand('hand-player2', gameState.player2Choice);
                 setTimeout(determineRPSWinner, 700);
             }, 700);
         } else {
-            // Switch to player 2
             gameState.currentPlayer = 2;
             document.getElementById('current-player-text').textContent = "Player 2's turn - Choose your weapon:";
             gameState.canPlay = false;
@@ -427,17 +166,14 @@ function playRPS(choice) {
         setTimeout(determineRPSWinner, 700);
     }
 }
-
 function showRPSHand(handId, choice) {
     const hand = document.getElementById(handId);
     const emoji = choice === 'rock' ? '✊' : choice === 'paper' ? '🖐️' : '✌️';
     hand.textContent = emoji;
     hand.className = 'rps-hand rps-hand-reveal';
 }
-
 function determineRPSWinner() {
     const result = determineWinner(gameState.player1Choice, gameState.player2Choice);
-    // Update scores
     if (result === 'win') {
         gameState.player1Score++;
     } else if (result === 'lose') {
@@ -445,7 +181,6 @@ function determineRPSWinner() {
     }
     document.getElementById('player1-score').textContent = gameState.player1Score;
     document.getElementById('player2-score').textContent = gameState.player2Score;
-    // Show result
     const resultDiv = document.getElementById('rps-result');
     resultDiv.style.display = 'block';
     resultDiv.className = `result ${result}`;
@@ -461,10 +196,6 @@ function determineRPSWinner() {
         'draw': `It's a draw! Both chose ${choiceEmojis[gameState.player1Choice]}`
     };
     resultDiv.textContent = resultMessages[result];
-    // Save game result
-    const winner = result === 'win' ? 'player1' : result === 'lose' ? 'player2' : 'draw';
-    saveGameResult('rps', gameMode, gameState.player1Score, gameState.player2Score, winner);
-    // Reset for next round
     setTimeout(() => {
         gameState.currentPlayer = 1;
         gameState.player1Choice = null;
@@ -476,7 +207,6 @@ function determineRPSWinner() {
         startRPSCountdown();
     }, 2000);
 }
-
 function resetRPS() {
     gameState = {
         player1Score: 0,
@@ -485,14 +215,17 @@ function resetRPS() {
         currentPlayer: 1,
         player1Choice: null,
         player2Choice: null,
-        round: 1
+        round: 1,
+        countdown: 3,
+        canPlay: false
     };
     document.getElementById('player1-score').textContent = '0';
     document.getElementById('player2-score').textContent = '0';
     document.getElementById('current-player-text').textContent = "Player 1's turn - Choose your weapon:";
     document.getElementById('rps-result').style.display = 'none';
+    animateRPSHands('reset');
+    startRPSCountdown();
 }
-
 function determineWinner(player, computer) {
     if (player === computer) return 'draw';
     if (
@@ -505,7 +238,7 @@ function determineWinner(player, computer) {
     return 'lose';
 }
 
-// Tic Tac Toe Game
+// --- Tic Tac Toe ---
 function loadTicTacToe() {
     gameState = {
         board: Array(9).fill(''),
@@ -515,7 +248,6 @@ function loadTicTacToe() {
         player2Score: 0,
         draws: 0
     };
-    
     const gameHTML = `
         <h2 class="game-title">⭕ Tic Tac Toe</h2>
         <div class="score-board">
@@ -532,15 +264,12 @@ function loadTicTacToe() {
             <button class="btn" onclick="resetTicTacToe()">New Game</button>
         </div>
     `;
-    
     document.getElementById('game-content').innerHTML = gameHTML;
     renderTicTacToeBoard();
 }
-
 function renderTicTacToeBoard() {
     const board = document.getElementById('ttt-board');
     board.innerHTML = '';
-    
     for (let i = 0; i < 9; i++) {
         const cell = document.createElement('div');
         cell.className = 'ttt-cell';
@@ -551,14 +280,10 @@ function renderTicTacToeBoard() {
         board.appendChild(cell);
     }
 }
-
 function makeMove(index) {
     if (gameState.board[index] !== '' || !gameState.gameActive) return;
-    
-    // Player move
     gameState.board[index] = gameState.currentPlayer;
     renderTicTacToeBoard();
-    
     if (checkWinner()) {
         gameState.gameActive = false;
         if (gameState.currentPlayer === 'X') {
@@ -568,31 +293,20 @@ function makeMove(index) {
             gameState.player2Score++;
             document.getElementById('player-o-score').textContent = gameState.player2Score;
         }
-        
-        const winner = gameState.currentPlayer === 'X' ? 'player1' : 'player2';
-        saveGameResult('ttt', gameMode, gameState.player1Score, gameState.player2Score, winner);
-        
         showTicTacToeResult(`${gameState.currentPlayer} wins!`);
         return;
     }
-    
     if (gameState.board.every(cell => cell !== '')) {
         gameState.gameActive = false;
         gameState.draws++;
         document.getElementById('draws-score').textContent = gameState.draws;
-        
-        saveGameResult('ttt', gameMode, gameState.player1Score, gameState.player2Score, 'draw');
-        
         showTicTacToeResult("It's a draw!");
         return;
     }
-    
-    // Switch players
     gameState.currentPlayer = gameState.currentPlayer === 'X' ? 'O' : 'X';
     const currentPlayerSpan = document.getElementById('current-player');
     currentPlayerSpan.textContent = gameState.currentPlayer;
     currentPlayerSpan.style.color = gameState.currentPlayer === 'X' ? '#ff6b6b' : '#4ecdc4';
-    
     // Computer move in single player mode
     if (gameMode === 'single' && gameState.currentPlayer === 'O') {
         setTimeout(() => {
@@ -603,14 +317,11 @@ function makeMove(index) {
         }, 500);
     }
 }
-
 function getComputerMove() {
     const availableMoves = gameState.board
         .map((cell, index) => cell === '' ? index : -1)
         .filter(index => index !== -1);
-    
     if (availableMoves.length === 0) return -1;
-    
     // Try to win
     for (let move of availableMoves) {
         const testBoard = [...gameState.board];
@@ -619,7 +330,6 @@ function getComputerMove() {
             return move;
         }
     }
-    
     // Block player from winning
     for (let move of availableMoves) {
         const testBoard = [...gameState.board];
@@ -628,30 +338,25 @@ function getComputerMove() {
             return move;
         }
     }
-    
     // Take center if available
     if (availableMoves.includes(4)) {
         return 4;
     }
-    
     // Take corners
     const corners = [0, 2, 6, 8];
     const availableCorners = corners.filter(corner => availableMoves.includes(corner));
     if (availableCorners.length > 0) {
         return availableCorners[Math.floor(Math.random() * availableCorners.length)];
     }
-    
     // Take any available move
     return availableMoves[Math.floor(Math.random() * availableMoves.length)];
 }
-
 function checkWinnerForBoard(board, player) {
     const winConditions = [
-        [0, 1, 2], [3, 4, 5], [6, 7, 8], // rows
-        [0, 3, 6], [1, 4, 7], [2, 5, 8], // columns
-        [0, 4, 8], [2, 4, 6] // diagonals
+        [0, 1, 2], [3, 4, 5], [6, 7, 8],
+        [0, 3, 6], [1, 4, 7], [2, 5, 8],
+        [0, 4, 8], [2, 4, 6]
     ];
-    
     return winConditions.some(condition => {
         const [a, b, c] = condition;
         return board[a] === player && 
@@ -659,14 +364,12 @@ function checkWinnerForBoard(board, player) {
                board[a] === board[c];
     });
 }
-
 function checkWinner() {
     const winConditions = [
-        [0, 1, 2], [3, 4, 5], [6, 7, 8], // rows
-        [0, 3, 6], [1, 4, 7], [2, 5, 8], // columns
-        [0, 4, 8], [2, 4, 6] // diagonals
+        [0, 1, 2], [3, 4, 5], [6, 7, 8],
+        [0, 3, 6], [1, 4, 7], [2, 5, 8],
+        [0, 4, 8], [2, 4, 6]
     ];
-    
     return winConditions.some(condition => {
         const [a, b, c] = condition;
         return gameState.board[a] && 
@@ -674,14 +377,12 @@ function checkWinner() {
                gameState.board[a] === gameState.board[c];
     });
 }
-
 function showTicTacToeResult(message) {
     const resultDiv = document.getElementById('ttt-result');
     resultDiv.style.display = 'block';
     resultDiv.textContent = message;
     resultDiv.className = message.includes('wins') ? 'result win' : 'result draw';
 }
-
 function resetTicTacToe() {
     gameState = {
         board: Array(9).fill(''),
@@ -697,7 +398,7 @@ function resetTicTacToe() {
     renderTicTacToeBoard();
 }
 
-// Memory Game
+// --- Memory Game ---
 function loadMemoryGame() {
     const symbols = ['🎮', '🎲', '🎯', '🎪', '🎨', '🎭', '🎪', '🎨'];
     gameState = {
@@ -710,9 +411,7 @@ function loadMemoryGame() {
         currentPlayer: 1,
         moves: 0
     };
-    
     const player2Name = gameMode === 'single' ? 'Computer' : 'Player 2';
-    
     const gameHTML = `
         <h2 class="game-title">🧠 Memory Game</h2>
         <div class="score-board">
@@ -729,59 +428,45 @@ function loadMemoryGame() {
             <button class="btn" onclick="resetMemoryGame()">New Game</button>
         </div>
     `;
-    
     document.getElementById('game-content').innerHTML = gameHTML;
     renderMemoryBoard();
 }
-
 function renderMemoryBoard() {
     const grid = document.getElementById('memory-grid');
     grid.innerHTML = '';
-    
     gameState.cards.forEach((symbol, index) => {
         const card = document.createElement('div');
         card.className = 'memory-card';
         card.dataset.index = index;
-        
         const isFlipped = gameState.flipped.includes(index) || gameState.matched.includes(index);
         const isMatched = gameState.matched.includes(index);
-        
         if (isFlipped) {
             card.classList.add('flipped');
             card.textContent = symbol;
         }
-        
         if (isMatched) {
             card.classList.add('matched');
         }
-        
         card.onclick = () => flipCard(index);
         grid.appendChild(card);
     });
 }
-
 function flipCard(index) {
     if (!gameState.canFlip || 
         gameState.flipped.includes(index) || 
         gameState.matched.includes(index)) {
         return;
     }
-    
     gameState.flipped.push(index);
     gameState.moves++;
     document.getElementById('moves').textContent = gameState.moves;
     renderMemoryBoard();
-    
     if (gameState.flipped.length === 2) {
         gameState.canFlip = false;
-        
         setTimeout(() => {
             const [first, second] = gameState.flipped;
-            
             if (gameState.cards[first] === gameState.cards[second]) {
                 gameState.matched.push(first, second);
-                
-                // Award point to current player
                 if (gameState.currentPlayer === 1) {
                     gameState.player1Score++;
                     document.getElementById('player1-matches').textContent = gameState.player1Score;
@@ -789,32 +474,22 @@ function flipCard(index) {
                     gameState.player2Score++;
                     document.getElementById('player2-matches').textContent = gameState.player2Score;
                 }
-                
                 if (gameState.matched.length === gameState.cards.length) {
                     const player2Name = gameMode === 'single' ? 'Computer' : 'Player 2';
                     const winner = gameState.player1Score > gameState.player2Score ? 'Player 1' : 
                                  gameState.player2Score > gameState.player1Score ? player2Name : 'Tie';
                     showMemoryResult(`Game Over! ${winner} wins!`);
-                    
-                    // Save game result
-                    const winnerType = gameState.player1Score > gameState.player2Score ? 'player1' : 
-                                     gameState.player2Score > gameState.player1Score ? 'player2' : 'draw';
-                    saveGameResult('memory', gameMode, gameState.player1Score, gameState.player2Score, winnerType);
                 }
             } else {
-                // Switch players if no match
                 gameState.currentPlayer = gameState.currentPlayer === 1 ? 2 : 1;
                 const currentPlayerSpan = document.getElementById('current-memory-player');
                 const player2Name = gameMode === 'single' ? 'Computer' : 'Player 2';
                 currentPlayerSpan.textContent = gameState.currentPlayer === 1 ? 'Player 1' : player2Name;
                 currentPlayerSpan.style.color = gameState.currentPlayer === 1 ? '#ff6b6b' : '#4ecdc4';
             }
-            
             gameState.flipped = [];
             gameState.canFlip = true;
             renderMemoryBoard();
-            
-            // Computer move in single player mode
             if (gameMode === 'single' && gameState.currentPlayer === 2 && gameState.matched.length < gameState.cards.length) {
                 setTimeout(() => {
                     makeComputerMove();
@@ -823,22 +498,14 @@ function flipCard(index) {
         }, 1000);
     }
 }
-
 function makeComputerMove() {
     if (!gameState.canFlip || gameState.matched.length >= gameState.cards.length) return;
-    
-    // Find unmatched cards
     const unmatchedCards = gameState.cards
         .map((symbol, index) => ({ symbol, index }))
         .filter(card => !gameState.matched.includes(card.index) && !gameState.flipped.includes(card.index));
-    
     if (unmatchedCards.length === 0) return;
-    
-    // Try to find a match if we remember any cards
     let firstCard = null;
     let secondCard = null;
-    
-    // Look for pairs we've seen before
     for (let i = 0; i < unmatchedCards.length; i++) {
         for (let j = i + 1; j < unmatchedCards.length; j++) {
             if (unmatchedCards[i].symbol === unmatchedCards[j].symbol) {
@@ -849,8 +516,6 @@ function makeComputerMove() {
         }
         if (firstCard) break;
     }
-    
-    // If no match found, pick random cards
     if (!firstCard) {
         firstCard = unmatchedCards[Math.floor(Math.random() * unmatchedCards.length)];
         const remainingCards = unmatchedCards.filter(card => card.index !== firstCard.index);
@@ -858,8 +523,6 @@ function makeComputerMove() {
             secondCard = remainingCards[Math.floor(Math.random() * remainingCards.length)];
         }
     }
-    
-    // Make the moves
     if (firstCard && secondCard) {
         flipCard(firstCard.index);
         setTimeout(() => {
@@ -867,14 +530,12 @@ function makeComputerMove() {
         }, 300);
     }
 }
-
 function showMemoryResult(message) {
     const resultDiv = document.getElementById('memory-result');
     resultDiv.style.display = 'block';
     resultDiv.textContent = message;
     resultDiv.className = 'result win';
 }
-
 function resetMemoryGame() {
     const symbols = ['🎮', '🎲', '🎯', '🎪', '🎨', '🎭', '🎪', '🎨'];
     gameState = {
@@ -894,9 +555,9 @@ function resetMemoryGame() {
     document.getElementById('current-memory-player').style.color = '#ff6b6b';
     document.getElementById('memory-result').style.display = 'none';
     renderMemoryBoard();
-} 
+}
 
-// Snake Game
+// --- Snake Game ---
 function loadSnakeGame() {
     gameState = {
         snake: [{x: 10, y: 10}],
@@ -909,19 +570,9 @@ function loadSnakeGame() {
         speed: 150,
         player1Score: 0,
         player2Score: 0,
-        currentPlayer: 1,
-        player1Snake: [{x: 5, y: 10}],
-        player2Snake: [{x: 15, y: 10}],
-        player1Direction: 'right',
-        player2Direction: 'left',
-        player1NextDirection: 'right',
-        player2NextDirection: 'left',
-        food1: {x: 8, y: 8},
-        food2: {x: 12, y: 12}
+        currentPlayer: 1
     };
-    
     const player2Name = gameMode === 'single' ? 'Computer' : 'Player 2';
-    
     const gameHTML = `
         <h2 class="game-title">🐍 Snake Game</h2>
         <div class="score-board">
@@ -943,16 +594,13 @@ function loadSnakeGame() {
             <button class="btn" onclick="resetSnakeGame()">New Game</button>
         </div>
     `;
-    
     document.getElementById('game-content').innerHTML = gameHTML;
     setupSnakeControls();
     renderSnakeGame();
 }
-
 function setupSnakeControls() {
     document.addEventListener('keydown', handleSnakeKeyPress);
 }
-
 function handleSnakeKeyPress(event) {
     if (!gameState.gameOver) {
         switch(event.key) {
@@ -987,7 +635,6 @@ function handleSnakeKeyPress(event) {
         }
     }
 }
-
 function startSnakeGame() {
     if (snakeGameLoop) {
         clearInterval(snakeGameLoop);
@@ -995,21 +642,15 @@ function startSnakeGame() {
     gameState.gameOver = false;
     snakeGameLoop = setInterval(updateSnakeGame, gameState.speed);
 }
-
 function pauseSnakeGame() {
     if (snakeGameLoop) {
         clearInterval(snakeGameLoop);
         snakeGameLoop = null;
     }
 }
-
 function updateSnakeGame() {
     if (gameState.gameOver) return;
-    
-    // Update direction
     gameState.direction = gameState.nextDirection;
-    
-    // Move snake
     const head = {...gameState.snake[0]};
     switch(gameState.direction) {
         case 'up': head.y--; break;
@@ -1017,20 +658,14 @@ function updateSnakeGame() {
         case 'left': head.x--; break;
         case 'right': head.x++; break;
     }
-    
-    // Check collision with walls
     if (head.x < 0 || head.x >= gameState.gridSize || head.y < 0 || head.y >= gameState.gridSize) {
-        gameOver();
+        snakeGameOver();
         return;
     }
-    
-    // Check collision with self
     if (gameState.snake.some(segment => segment.x === head.x && segment.y === head.y)) {
-        gameOver();
+        snakeGameOver();
         return;
     }
-    
-    // Check if food eaten
     if (head.x === gameState.food.x && head.y === gameState.food.y) {
         gameState.score++;
         document.getElementById('current-snake-score').textContent = gameState.score;
@@ -1038,11 +673,9 @@ function updateSnakeGame() {
     } else {
         gameState.snake.pop();
     }
-    
     gameState.snake.unshift(head);
     renderSnakeGame();
 }
-
 function generateFood() {
     do {
         gameState.food = {
@@ -1051,15 +684,12 @@ function generateFood() {
         };
     } while (gameState.snake.some(segment => segment.x === gameState.food.x && segment.y === gameState.food.y));
 }
-
-function gameOver() {
+function snakeGameOver() {
     gameState.gameOver = true;
     if (snakeGameLoop) {
         clearInterval(snakeGameLoop);
         snakeGameLoop = null;
     }
-    
-    // Award points to current player
     if (gameState.currentPlayer === 1) {
         gameState.player1Score += gameState.score;
         document.getElementById('player1-snake-score').textContent = gameState.player1Score;
@@ -1067,22 +697,16 @@ function gameOver() {
         gameState.player2Score += gameState.score;
         document.getElementById('player2-snake-score').textContent = gameState.player2Score;
     }
-    
     showSnakeResult(`Game Over! Score: ${gameState.score}`);
-    
-    // Switch players
     gameState.currentPlayer = gameState.currentPlayer === 1 ? 2 : 1;
     const currentPlayerSpan = document.getElementById('current-snake-player');
     const player2Name = gameMode === 'single' ? 'Computer' : 'Player 2';
     currentPlayerSpan.textContent = gameState.currentPlayer === 1 ? 'Player 1' : player2Name;
     currentPlayerSpan.style.color = gameState.currentPlayer === 1 ? '#ff6b6b' : '#4ecdc4';
-    
-    // Reset for next round
     setTimeout(() => {
         resetSnakeRound();
     }, 2000);
 }
-
 function resetSnakeRound() {
     gameState.snake = [{x: 10, y: 10}];
     gameState.direction = 'right';
@@ -1094,17 +718,12 @@ function resetSnakeRound() {
     document.getElementById('snake-result').style.display = 'none';
     renderSnakeGame();
 }
-
 function renderSnakeGame() {
     const canvas = document.getElementById('snake-canvas');
     const ctx = canvas.getContext('2d');
     const cellSize = canvas.width / gameState.gridSize;
-    
-    // Clear canvas
     ctx.fillStyle = '#2c3e50';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
-    // Draw grid
     ctx.strokeStyle = '#34495e';
     ctx.lineWidth = 1;
     for (let i = 0; i <= gameState.gridSize; i++) {
@@ -1112,27 +731,20 @@ function renderSnakeGame() {
         ctx.moveTo(i * cellSize, 0);
         ctx.lineTo(i * cellSize, canvas.height);
         ctx.stroke();
-        
         ctx.beginPath();
         ctx.moveTo(0, i * cellSize);
         ctx.lineTo(canvas.width, i * cellSize);
         ctx.stroke();
     }
-    
-    // Draw snake
     ctx.fillStyle = gameState.currentPlayer === 1 ? '#e74c3c' : '#3498db';
     gameState.snake.forEach((segment, index) => {
         if (index === 0) {
-            // Head
             ctx.fillStyle = gameState.currentPlayer === 1 ? '#c0392b' : '#2980b9';
         } else {
-            // Body
             ctx.fillStyle = gameState.currentPlayer === 1 ? '#e74c3c' : '#3498db';
         }
         ctx.fillRect(segment.x * cellSize + 1, segment.y * cellSize + 1, cellSize - 2, cellSize - 2);
     });
-    
-    // Draw food
     ctx.fillStyle = '#f1c40f';
     ctx.beginPath();
     ctx.arc(
@@ -1144,20 +756,17 @@ function renderSnakeGame() {
     );
     ctx.fill();
 }
-
 function showSnakeResult(message) {
     const resultDiv = document.getElementById('snake-result');
     resultDiv.style.display = 'block';
     resultDiv.textContent = message;
     resultDiv.className = 'result win';
 }
-
 function resetSnakeGame() {
     if (snakeGameLoop) {
         clearInterval(snakeGameLoop);
         snakeGameLoop = null;
     }
-    
     gameState = {
         snake: [{x: 10, y: 10}],
         food: {x: 15, y: 15},
@@ -1169,17 +778,8 @@ function resetSnakeGame() {
         speed: 150,
         player1Score: 0,
         player2Score: 0,
-        currentPlayer: 1,
-        player1Snake: [{x: 5, y: 10}],
-        player2Snake: [{x: 15, y: 10}],
-        player1Direction: 'right',
-        player2Direction: 'left',
-        player1NextDirection: 'right',
-        player2NextDirection: 'left',
-        food1: {x: 8, y: 8},
-        food2: {x: 12, y: 12}
+        currentPlayer: 1
     };
-    
     document.getElementById('player1-snake-score').textContent = '0';
     document.getElementById('player2-snake-score').textContent = '0';
     document.getElementById('current-snake-score').textContent = '0';
@@ -1187,4 +787,7 @@ function resetSnakeGame() {
     document.getElementById('current-snake-player').style.color = '#ff6b6b';
     document.getElementById('snake-result').style.display = 'none';
     renderSnakeGame();
-} 
+}
+
+// Show main menu on load
+window.onload = showMainMenu; 
