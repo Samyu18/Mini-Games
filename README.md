@@ -10,6 +10,25 @@ A beautiful, animated collection of browser mini-games (Rock Paper Scissors, Tic
 
 ---
 
+## Screenshots
+
+### Home Page
+![Home Page](static/img/homepage.png)
+
+### Snake Game
+![Snake Game](static/img/snake.png)
+
+### Tic Tac Toe
+![Tic Tac Toe](static/img/tictactoe.png)
+
+### Rock Paper Scissors
+![Rock Paper Scissors](static/img/rsp.png)
+
+### Memory Game
+![Memory Game](static/img/memory.png)
+
+---
+
 ## Deploying to GitHub Pages
 
 1. **Project Structure**
@@ -21,6 +40,12 @@ A beautiful, animated collection of browser mini-games (Rock Paper Scissors, Tic
          styles.css
        js/
          script.js
+       img/
+         homepage.png
+         snake.png
+         tictactoe.png
+         rsp.png
+         memory.png
    ```
 
 2. **Push to GitHub**
@@ -44,5 +69,4 @@ A beautiful, animated collection of browser mini-games (Rock Paper Scissors, Tic
 
 ---
 
-## License
-MIT 
+##
